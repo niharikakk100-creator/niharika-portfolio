@@ -463,7 +463,7 @@ const Testimonials = () => {
                     <label className="block text-xs font-mono text-white/70 mb-1 uppercase">Role / Project Type</label>
                     <input
                       type="text"
-                      placeholder="e.g. Video Editor, Creator, SFX Pack"
+                      placeholder="e.g. Video Editor, Creator, Reel Edit"
                       value={newReview.role}
                       onChange={(e) => setNewReview({ ...newReview, role: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:border-red-500 transition-colors"
@@ -476,7 +476,7 @@ const Testimonials = () => {
                     <textarea
                       required
                       rows={3}
-                      placeholder="e.g. Really good SFX pack🔥 / Broo, video edit adipoli aanu❤️"
+                      placeholder="e.g. Editing quality is next level! 🔥 / Broo, video edit adipoli aanu❤️"
                       value={newReview.quote}
                       onChange={(e) => setNewReview({ ...newReview, quote: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:border-red-500 transition-colors"
