@@ -33,48 +33,18 @@ const Testimonials = () => {
       easing: 'ease-out'
     });
 
-    const loadGlobalReviews = async () => {
+    const loadReviews = () => {
       try {
-        // Load local user reviews first
-        const localData = localStorage.getItem('niharika_global_user_reviews');
-        let localReviews = localData ? JSON.parse(localData) : [];
-
-        // Attempt fetching global online reviews from Cloud API
-        try {
-          const res = await fetch('https://api.jsonbin.io/v3/b/66bda19ee41b4d34e42095f9/latest', {
-            headers: {
-              'X-Master-Key': '$2a$10$tJ99b4F.6sK2o7cM2hQcRe/7x14P2a3a0e',
-            }
-          });
-          if (res.ok) {
-            const cloudJson = await res.json();
-            const cloudReviews = cloudJson.record || [];
-            
-            // Deduplicate and merge cloud reviews + local reviews + initial static reviews
-            const combinedMap = new Map();
-            [...localReviews, ...cloudReviews, ...initialTestimonials].forEach((item) => {
-              if (item && item.id) combinedMap.set(item.id, item);
-            });
-            const mergedList = Array.from(combinedMap.values());
-            setAllTestimonials(mergedList);
-            return;
-          }
-        } catch (err) {
-          console.log('Cloud sync fallback to local storage');
-        }
-
-        // Fallback to local + static reviews
-        const combinedMap = new Map();
-        [...localReviews, ...initialTestimonials].forEach((item) => {
-          if (item && item.id) combinedMap.set(item.id, item);
-        });
-        setAllTestimonials(Array.from(combinedMap.values()));
+        const localData = localStorage.getItem('niharika_user_reviews_v2');
+        let userReviews = localData ? JSON.parse(localData) : [];
+        const combined = [...userReviews, ...initialTestimonials];
+        setAllTestimonials(combined);
       } catch (e) {
         setAllTestimonials(initialTestimonials);
       }
     };
 
-    loadGlobalReviews();
+    loadReviews();
   }, []);
 
   // Auto-slide carousel every 6 seconds unless paused by user
@@ -126,29 +96,15 @@ const Testimonials = () => {
 
     try {
       // 1. Save locally
-      const localData = localStorage.getItem('niharika_global_user_reviews');
+      const localData = localStorage.getItem('niharika_user_reviews_v2');
       const localList = localData ? JSON.parse(localData) : [];
       const updatedLocalList = [formattedReview, ...localList];
-      localStorage.setItem('niharika_global_user_reviews', JSON.stringify(updatedLocalList));
+      localStorage.setItem('niharika_user_reviews_v2', JSON.stringify(updatedLocalList));
 
       // 2. Update UI state immediately
       const updatedAll = [formattedReview, ...allTestimonials];
       setAllTestimonials(updatedAll);
       setActiveIndex(0);
-
-      // 3. Sync globally to Cloud REST API so everyone on the web sees it
-      try {
-        await fetch('https://api.jsonbin.io/v3/b/66bda19ee41b4d34e42095f9', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Master-Key': '$2a$10$tJ99b4F.6sK2o7cM2hQcRe/7x14P2a3a0e',
-          },
-          body: JSON.stringify(updatedLocalList),
-        });
-      } catch (cloudErr) {
-        console.log('Global cloud sync saved locally');
-      }
 
       setSubmitSuccess(true);
       setIsSubmitting(false);
