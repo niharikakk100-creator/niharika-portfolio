@@ -18,7 +18,7 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navLinks = ['Home', 'About', 'Skills', 'Projects', 'Certifications', 'Contact'];
+  const navLinks = ['Home', 'About', 'Skills', 'Projects', 'Certifications', 'Testimonials', 'Contact'];
 
   const hireMeUrl = socialLinks.linkedin || "#contact";
 
