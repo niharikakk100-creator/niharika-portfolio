@@ -19,7 +19,7 @@ export const personalInfo = {
 };
 
 export const socialLinks = {
-  instagram: "https://instagram.com/vertex_editt",
+  instagram: null,
   github: null,
   linkedin: null,
 };
@@ -33,7 +33,7 @@ export const heroContent = {
   ctaPrimary: { text: "Explore Portfolio", href: "#projects" },
   ctaSecondary: {
     text: "Let's Talk",
-    href: "https://instagram.com/vertex_editt",
+    href: "#contact",
   },
 
 

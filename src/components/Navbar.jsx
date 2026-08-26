@@ -20,7 +20,7 @@ const Navbar = () => {
 
   const navLinks = ['Home', 'About', 'Skills', 'Projects', 'Certifications', 'Contact'];
 
-  const hireMeUrl = socialLinks.linkedin || socialLinks.instagram || "https://instagram.com/vertex_editt";
+  const hireMeUrl = socialLinks.linkedin || "#contact";
 
   return (
     <nav 
