@@ -344,6 +344,30 @@ export const testimonials = [
     rating: 5,
     quote: "This video was actually very important to us, so I was a little nervous about giving the footage to someone else. Niharika handled the important moments beautifully. When we watched the final video, it brought back the whole experience again",
     isReal: true,
+  },
+  {
+    id: "testimonial-sandeep",
+    name: "Sandeep",
+    role: "Podcast",
+    company: "Verified Client",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sandeep&backgroundColor=b6e3f4",
+    initials: "S",
+    projectType: "Podcast",
+    rating: 5,
+    quote: "Working with Niharika was really easy. I didn’t have to explain the same thing again and again. She understood the requirement, gave suggestions when needed and delivered a clean final video. Would definitely work with her again.",
+    isReal: true,
+  },
+  {
+    id: "testimonial-rohit-promo",
+    name: "Rohit",
+    role: "Promotional Video",
+    company: "Verified Client",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=RohitPromo&backgroundColor=ffdfbf",
+    initials: "R",
+    projectType: "Promotional Video",
+    rating: 5,
+    quote: "Initially I thought I would just get a normal edited video from the footage we provided. But Niharika added a lot of small things that made the whole video feel much more complete. Didn’t expect it to come out this good.",
+    isReal: true,
   }
 ];
 
