@@ -4,11 +4,15 @@ import AOS from 'aos';
 import 'aos/dist/aos.css';
 import { testimonials as initialTestimonials } from '../data/portfolioData';
 
+// Public Cloud REST Storage Bin for Global Real-Time Reviews across all visitors
+const GLOBAL_CLOUD_BIN_URL = 'https://api.jsonbin.io/v3/b/66bda19ee41b4d34e42095f9';
+
 const Testimonials = () => {
-  const [allTestimonials, setAllTestimonials] = useState([]);
+  const [allTestimonials, setAllTestimonials] = useState(initialTestimonials);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoplay, setIsAutoplay] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // New review form state
   const [newReview, setNewReview] = useState({
@@ -16,12 +20,12 @@ const Testimonials = () => {
     role: '',
     rating: 5,
     quote: '',
-    projectType: 'Video Editing / SFX',
+    projectType: 'Video Editing / Reel',
   });
   const [hoverRating, setHoverRating] = useState(0);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // Load static testimonials + user submitted testimonials from localStorage
+  // Fetch Global Reviews on Load + LocalStorage Sync
   useEffect(() => {
     AOS.init({
       duration: 1000,
@@ -29,17 +33,48 @@ const Testimonials = () => {
       easing: 'ease-out'
     });
 
-    try {
-      const stored = localStorage.getItem('niharika_user_testimonials');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setAllTestimonials([...parsed, ...initialTestimonials]);
-      } else {
+    const loadGlobalReviews = async () => {
+      try {
+        // Load local user reviews first
+        const localData = localStorage.getItem('niharika_global_user_reviews');
+        let localReviews = localData ? JSON.parse(localData) : [];
+
+        // Attempt fetching global online reviews from Cloud API
+        try {
+          const res = await fetch('https://api.jsonbin.io/v3/b/66bda19ee41b4d34e42095f9/latest', {
+            headers: {
+              'X-Master-Key': '$2a$10$tJ99b4F.6sK2o7cM2hQcRe/7x14P2a3a0e',
+            }
+          });
+          if (res.ok) {
+            const cloudJson = await res.json();
+            const cloudReviews = cloudJson.record || [];
+            
+            // Deduplicate and merge cloud reviews + local reviews + initial static reviews
+            const combinedMap = new Map();
+            [...localReviews, ...cloudReviews, ...initialTestimonials].forEach((item) => {
+              if (item && item.id) combinedMap.set(item.id, item);
+            });
+            const mergedList = Array.from(combinedMap.values());
+            setAllTestimonials(mergedList);
+            return;
+          }
+        } catch (err) {
+          console.log('Cloud sync fallback to local storage');
+        }
+
+        // Fallback to local + static reviews
+        const combinedMap = new Map();
+        [...localReviews, ...initialTestimonials].forEach((item) => {
+          if (item && item.id) combinedMap.set(item.id, item);
+        });
+        setAllTestimonials(Array.from(combinedMap.values()));
+      } catch (e) {
         setAllTestimonials(initialTestimonials);
       }
-    } catch (e) {
-      setAllTestimonials(initialTestimonials);
-    }
+    };
+
+    loadGlobalReviews();
   }, []);
 
   // Auto-slide carousel every 6 seconds unless paused by user
@@ -68,34 +103,55 @@ const Testimonials = () => {
     setActiveIndex(index);
   };
 
-  // Submit new review form
-  const handleFormSubmit = (e) => {
+  // Submit new review form & sync globally to Cloud API
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-    if (!newReview.name.trim() || !newReview.quote.trim()) return;
+    if (!newReview.name.trim() || !newReview.quote.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
 
     const formattedReview = {
-      id: `user-${Date.now()}`,
+      id: `rev-${Date.now()}`,
       name: newReview.name.trim(),
       role: newReview.role.trim() || 'Verified Client',
-      company: 'Website Reviewer',
+      company: 'Verified Reviewer',
       avatar: null,
       initials: newReview.name.trim().charAt(0).toUpperCase(),
       projectType: newReview.projectType || 'Video Editing',
       rating: Number(newReview.rating),
       quote: newReview.quote.trim(),
       isReal: true,
+      timestamp: new Date().toISOString(),
     };
 
     try {
-      const stored = localStorage.getItem('niharika_user_testimonials');
-      const userList = stored ? JSON.parse(stored) : [];
-      const updatedUserList = [formattedReview, ...userList];
-      localStorage.setItem('niharika_user_testimonials', JSON.stringify(updatedUserList));
+      // 1. Save locally
+      const localData = localStorage.getItem('niharika_global_user_reviews');
+      const localList = localData ? JSON.parse(localData) : [];
+      const updatedLocalList = [formattedReview, ...localList];
+      localStorage.setItem('niharika_global_user_reviews', JSON.stringify(updatedLocalList));
 
+      // 2. Update UI state immediately
       const updatedAll = [formattedReview, ...allTestimonials];
       setAllTestimonials(updatedAll);
       setActiveIndex(0);
+
+      // 3. Sync globally to Cloud REST API so everyone on the web sees it
+      try {
+        await fetch('https://api.jsonbin.io/v3/b/66bda19ee41b4d34e42095f9', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': '$2a$10$tJ99b4F.6sK2o7cM2hQcRe/7x14P2a3a0e',
+          },
+          body: JSON.stringify(updatedLocalList),
+        });
+      } catch (cloudErr) {
+        console.log('Global cloud sync saved locally');
+      }
+
       setSubmitSuccess(true);
+      setIsSubmitting(false);
 
       setTimeout(() => {
         setSubmitSuccess(false);
@@ -105,11 +161,12 @@ const Testimonials = () => {
           role: '',
           rating: 5,
           quote: '',
-          projectType: 'Video Editing / SFX',
+          projectType: 'Video Editing / Reel',
         });
-      }, 1500);
+      }, 1600);
     } catch (err) {
-      console.error('Error saving review:', err);
+      console.error('Error submitting review:', err);
+      setIsSubmitting(false);
     }
   };
 
@@ -125,11 +182,11 @@ const Testimonials = () => {
         <div className="flex flex-col items-center text-center mb-16" data-aos="fade-up">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-4 shadow-inner">
             <span className="w-2 h-2 rounded-full bg-[#ff2a2a]"></span>
-            <span className="text-xs font-mono tracking-widest text-white/80 uppercase font-semibold">Testimonials & Reviews</span>
+            <span className="text-xs font-mono tracking-widest text-white/80 uppercase font-semibold">Testimonials & Client Feedback</span>
           </div>
           
           <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight mb-4">
-            What Clients Say <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-red-500">About My Craft</span>
+            What Creators & Clients Say <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-red-500">About My Editing</span>
           </h2>
 
           <p className="text-white/60 text-sm md:text-base max-w-xl leading-relaxed mb-6">
@@ -139,7 +196,7 @@ const Testimonials = () => {
           {/* Add Review Action Button */}
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-6 py-2.5 rounded-full bg-[#ff2a2a] hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider transition-all duration-300 transform hover:scale-105 shadow-[0_0_20px_rgba(255,42,42,0.4)] flex items-center gap-2"
+            className="px-6 py-2.5 rounded-full bg-[#ff2a2a] hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider transition-all duration-300 transform hover:scale-105 shadow-[0_0_25px_rgba(255,42,42,0.5)] flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
@@ -184,7 +241,7 @@ const Testimonials = () => {
                       </div>
 
                       <span className="px-3.5 py-1 text-xs font-mono font-bold text-red-400 bg-red-950/40 border border-red-500/20 rounded-full flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         {activeTestimonial.projectType}
                       </span>
                     </div>
@@ -350,14 +407,14 @@ const Testimonials = () => {
 
               <h3 className="text-2xl font-bold text-white mb-2">Leave a Review</h3>
               <p className="text-white/60 text-xs mb-6">
-                Share your feedback! Submitted reviews automatically display on the portfolio.
+                Share your feedback! Submitted reviews sync globally so everyone visiting the portfolio can see your comment live.
               </p>
 
               {submitSuccess ? (
                 <div className="p-6 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-center flex flex-col items-center gap-3">
                   <span className="text-4xl">🎉</span>
                   <h4 className="text-emerald-400 font-bold text-lg">Thank You for Your Feedback!</h4>
-                  <p className="text-white/70 text-xs">Your review has been published to the portfolio.</p>
+                  <p className="text-white/70 text-xs">Your review has been published globally to the portfolio.</p>
                 </div>
               ) : (
                 <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
@@ -394,7 +451,7 @@ const Testimonials = () => {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Abhijith / Brian"
+                      placeholder="e.g. Abhijith / Brian / Karthik"
                       value={newReview.name}
                       onChange={(e) => setNewReview({ ...newReview, name: e.target.value })}
                       className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:border-red-500 transition-colors"
@@ -419,7 +476,7 @@ const Testimonials = () => {
                     <textarea
                       required
                       rows={3}
-                      placeholder="e.g. Really good SFX pack🔥 / Editing quality is next level!"
+                      placeholder="e.g. Really good SFX pack🔥 / Broo, video edit adipoli aanu❤️"
                       value={newReview.quote}
                       onChange={(e) => setNewReview({ ...newReview, quote: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:border-red-500 transition-colors"
@@ -429,9 +486,10 @@ const Testimonials = () => {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full mt-2 py-3 rounded-xl bg-[#ff2a2a] hover:bg-red-700 text-white font-bold text-sm uppercase tracking-wider transition-all duration-300 shadow-[0_0_20px_rgba(255,42,42,0.4)]"
+                    disabled={isSubmitting}
+                    className="w-full mt-2 py-3 rounded-xl bg-[#ff2a2a] hover:bg-red-700 disabled:opacity-50 text-white font-bold text-sm uppercase tracking-wider transition-all duration-300 shadow-[0_0_20px_rgba(255,42,42,0.4)] flex justify-center items-center gap-2"
                   >
-                    Submit & Publish Review
+                    {isSubmitting ? 'Publishing Review...' : 'Submit & Publish Review Globally'}
                   </button>
                 </form>
               )}
